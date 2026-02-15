@@ -102,7 +102,7 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -180,8 +180,8 @@ vim.diagnostic.config {
   underline = { severity = vim.diagnostic.severity.ERROR },
 
   -- Can switch between these as you prefer
-  virtual_text = true, -- Text shows up at the end of the line
-  virtual_lines = false, -- Teest shows up underneath the line, with virtual lines
+  virtual_text = {severity = { min = vim.diagnostic.severity.WARN}}, -- Teest shows up underneath the line, with virtual lines
+  virtual_lines = false,
 
   -- Auto open the float, so you can easily read the errors when jumping with `[d` and `]d`
   jump = { float = true },
@@ -198,10 +198,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -351,7 +351,7 @@ require('lazy').setup({
         cond = function() return vim.fn.executable 'make' == 1 end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
-
+      { 'nvim-pack/nvim-spectre', opts = {} },
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
@@ -406,10 +406,34 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>S.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      vim.keymap.set('n', '<leader>s', '<cmd>lua require("spectre").toggle()<CR>', { desc = 'Toggle Spectre' })
+      vim.keymap.set('n', '<leader>hh', function()
+        local file = vim.api.nvim_buf_get_name(0)
+        local path = file:match("(.*)%.")
+        local ext = file:match("%.([^%.]+)$")
 
+        if ext == 'cpp' or ext == 'cc' or ext == 'c' then
+          local header = path .. '.h' 
+          if vim.fn.filereadable(header) == 0 then
+            header = path .. '.hpp'
+          end
+          vim.cmd('edit ' .. header)
+        elseif
+          ext == 'h' or ext == 'hpp' then
+          local source = path .. '.cpp'
+          if vim.fn.filereadable(source) == 0 then
+            source = path .. '.c'
+          end
+          if vim.fn.filereadable(source) == 0 then
+            source = path .. '.cc'
+          end
+          vim.cmd('edit ' .. source)
+        end
+      end,
+      { desc = 'Switch between [H]eader and Source' })
       -- This runs on LSP attach per buffer (see main LSP attach function in 'neovim/nvim-lspconfig' config for more info,
       -- it is better explained there). This allows easily switching between pickers if you prefer using something else!
       vim.api.nvim_create_autocmd('LspAttach', {
@@ -418,29 +442,29 @@ require('lazy').setup({
           local buf = event.buf
 
           -- Find references for the word under your cursor.
-          vim.keymap.set('n', 'grr', builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
+          vim.keymap.set('n', '<leader>grr', builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
 
           -- Jump to the implementation of the word under your cursor.
           -- Useful when your language has ways of declaring types without an actual implementation.
-          vim.keymap.set('n', 'gri', builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
+          vim.keymap.set('n', '<leader>gri', builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
 
           -- Jump to the definition of the word under your cursor.
           -- This is where a variable was first declared, or where a function is defined, etc.
           -- To jump back, press <C-t>.
-          vim.keymap.set('n', 'grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
+          vim.keymap.set('n', '<leader>grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
 
           -- Fuzzy find all the symbols in your current document.
           -- Symbols are things like variables, functions, types, etc.
-          vim.keymap.set('n', 'gO', builtin.lsp_document_symbols, { buffer = buf, desc = 'Open Document Symbols' })
+          vim.keymap.set('n', '<leader>gO', builtin.lsp_document_symbols, { buffer = buf, desc = 'Open Document Symbols' })
 
           -- Fuzzy find all the symbols in your current workspace.
           -- Similar to document symbols, except searches over your entire project.
-          vim.keymap.set('n', 'gW', builtin.lsp_dynamic_workspace_symbols, { buffer = buf, desc = 'Open Workspace Symbols' })
+          vim.keymap.set('n', '<leader>gW', builtin.lsp_dynamic_workspace_symbols, { buffer = buf, desc = 'Open Workspace Symbols' })
 
           -- Jump to the type of the word under your cursor.
           -- Useful when you're not sure what type a variable is and you want to see
           -- the definition of its *type*, not where it was *defined*.
-          vim.keymap.set('n', 'grt', builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
+          vim.keymap.set('n', '<leader>grt', builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
         end,
       })
 
@@ -593,7 +617,7 @@ require('lazy').setup({
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --  See `:help lsp-config` for information about keys and how to configure
       local servers = {
-        -- clangd = {},
+        clangd = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -614,7 +638,7 @@ require('lazy').setup({
       -- You can press `g?` for help in this menu.
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
-        'lua_ls', -- Lua Language server
+        'lua-language-server', -- Lua Language server
         'stylua', -- Used to format Lua code
         -- You can add other tools here that you want Mason to install
       })
@@ -674,18 +698,19 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
+        local disable_filetypes = { c = true }
         if disable_filetypes[vim.bo[bufnr].filetype] then
           return nil
         else
           return {
-            timeout_ms = 500,
+            timeout_ms = 1500,
             lsp_format = 'fallback',
           }
         end
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        cpp = {'clang-format'},
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -750,7 +775,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'super-tab',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
